@@ -4,8 +4,10 @@
   "private": true,
   "scripts": {
     "fastapi-dev": "python3 -m uvicorn api.index:app --reload",
-    "next-dev": "next dev",
-    "dev": "concurrently \"npm run next-dev\" \"npm run fastapi-dev\"",
+    "backend-secure": "cd yale-ventures-backend-secure && ./start_backend.sh",
+    "next-dev": "next dev -p 3000",
+    "dev": "concurrently \"npm run next-dev\" \"npm run backend-secure\"",
+    "dev-original": "concurrently \"npm run next-dev\" \"npm run fastapi-dev\"",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"

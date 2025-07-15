@@ -4,8 +4,9 @@ from typing import List
 from openai.types.chat.chat_completion_message_param import ChatCompletionMessageParam
 from pydantic import BaseModel
 from dotenv import load_dotenv
-from fastapi import FastAPI, Query
-from fastapi.responses import StreamingResponse
+from fastapi import FastAPI, Query, HTTPException, Request as FastAPIRequest
+from fastapi.responses import StreamingResponse, JSONResponse
+from fastapi.exceptions import RequestValidationError
 from openai import OpenAI
 from .utils.prompt import ClientMessage, convert_to_openai_messages
 from .utils.tools import get_current_weather
@@ -15,18 +16,43 @@ load_dotenv(".env")
 
 app = FastAPI()
 
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: FastAPIRequest, exc: RequestValidationError):
+    body = await request.body()
+    print(f"VALIDATION ERROR: {exc.errors()}")
+    print(f"REQUEST BODY: {body}")
+    return JSONResponse(
+        status_code=422,
+        content={"detail": exc.errors(), "body": body.decode()}
+    )
+
 client = OpenAI(
     api_key=os.environ.get("OPENAI_API_KEY"),
 )
 
 
 class Request(BaseModel):
-    messages: List[ClientMessage]
+    messages: List[ClientMessage] = []
+    message: str = ""
+    session_id: str = ""
+    
+    @property
+    def get_message_content(self) -> str:
+        """Extract message content from either format"""
+        if self.message:
+            return self.message
+        elif self.messages and len(self.messages) > 0:
+            return self.messages[-1].content
+        return ""
 
 
 available_tools = {
     "get_current_weather": get_current_weather,
 }
+
+@app.get("/api/health")
+async def health_check():
+    return {"status": "ok"}
 
 def do_stream(messages: List[ChatCompletionMessageParam]):
     stream = client.chat.completions.create(
@@ -145,9 +171,82 @@ def stream_text(messages: List[ChatCompletionMessageParam], protocol: str = 'dat
 
 @app.post("/api/chat")
 async def handle_chat_data(request: Request, protocol: str = Query('data')):
-    messages = request.messages
-    openai_messages = convert_to_openai_messages(messages)
+    print(f"DEBUG: Received request - messages: {request.messages}, message: {request.message}, session_id: {request.session_id}")
+    
+    try:
+        import httpx
+        
+        # Check if we should use the secure backend
+        backend_url = os.environ.get("BACKEND_URL")
+        
+        if backend_url:
+            try:
+                async with httpx.AsyncClient() as client:
+                    # Get the message content using the property
+                    message_content = request.get_message_content
+                    
+                    if not message_content:
+                        raise ValueError("No message provided")
+                    
+                    # Check if we have a session_id in the request or need to create one
+                    session_id = request.session_id
+                    
+                    if not session_id:
+                        # Create a new session
+                        session_response = await client.post(
+                            f"{backend_url}/sessions",
+                            json={},
+                            headers={"Content-Type": "application/json"},
+                            timeout=30.0
+                        )
+                        if session_response.status_code == 200:
+                            session_data = session_response.json()
+                            session_id = session_data.get("session_id")
+                        else:
+                            raise ValueError("Failed to create session")
+                    
+                    # Send message to secure backend
+                    chat_response = await client.post(
+                        f"{backend_url}/chat",
+                        json={
+                            "session_id": session_id,
+                            "message": message_content
+                        },
+                        headers={"Content-Type": "application/json"},
+                        timeout=30.0
+                    )
+                    
+                    if chat_response.status_code == 200:
+                        backend_data = chat_response.json()
+                        response_text = backend_data.get("response", "")
+                        
+                        # Convert to streaming format expected by frontend
+                        def generate_stream():
+                            import json
+                            # Stream the response text
+                            yield f'0:{json.dumps(response_text)}\n'
+                            # End the stream
+                            yield f'e:{{"finishReason":"stop","usage":{{"promptTokens":0,"completionTokens":0}},"isContinued":false}}\n'
+                        
+                        return StreamingResponse(
+                            generate_stream(),
+                            media_type="text/plain",
+                            headers={'x-vercel-ai-data-stream': 'v1'}
+                        )
+                        
+            except Exception as e:
+                print(f"Error connecting to secure backend: {e}")
+                # Fall back to original implementation
+                pass
+        
+        # Original implementation as fallback
+        messages = request.messages
+        openai_messages = convert_to_openai_messages(messages)
 
-    response = StreamingResponse(stream_text(openai_messages, protocol))
-    response.headers['x-vercel-ai-data-stream'] = 'v1'
-    return response
+        response = StreamingResponse(stream_text(openai_messages, protocol))
+        response.headers['x-vercel-ai-data-stream'] = 'v1'
+        return response
+        
+    except Exception as e:
+        print(f"Error in handle_chat_data: {e}")
+        raise HTTPException(status_code=400, detail=str(e))

@@ -7,6 +7,7 @@ import { useScrollToBottom } from "@/hooks/use-scroll-to-bottom";
 import { ToolInvocation } from "ai";
 import { useChat } from "ai/react";
 import { toast } from "sonner";
+import { useState, useCallback } from "react";
 
 export function Chat() {
   const chatId = "001";
@@ -21,6 +22,48 @@ export function Chat() {
     isLoading,
     stop,
   } = useChat({
+    fetch: async (url, init) => {
+      const body = JSON.parse(init?.body as string || '{}');
+      const lastMessage = body.messages?.[body.messages.length - 1];
+      
+      if (lastMessage) {
+        // Convert AI SDK format to secure backend format
+        const secureBackendBody = {
+          message: lastMessage.content,
+          session_id: "sess_c7bff78b1af6" // Use the session we created
+        };
+        
+        const response = await fetch("http://localhost:8000/api/chat", {
+          ...init,
+          body: JSON.stringify(secureBackendBody)
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          // Convert secure backend response to AI SDK streaming format
+          const encoder = new TextEncoder();
+          const stream = new ReadableStream({
+            start(controller) {
+              // Send the content in the correct AI SDK format
+              controller.enqueue(encoder.encode(`0:${JSON.stringify(data.response)}\n`));
+              controller.enqueue(encoder.encode(`e:{"finishReason":"stop","usage":{"promptTokens":0,"completionTokens":0},"isContinued":false}\n`));
+              controller.close();
+            }
+          });
+          
+          return new Response(stream, {
+            headers: { 
+              'content-type': 'text/plain',
+              'x-vercel-ai-data-stream': 'v1' 
+            }
+          });
+        }
+        
+        return response;
+      }
+      
+      return fetch(url, init);
+    },
     maxSteps: 4,
     onError: (error) => {
       if (error.message.includes("Too many requests")) {
