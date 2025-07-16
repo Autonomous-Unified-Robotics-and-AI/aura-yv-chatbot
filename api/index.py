@@ -54,6 +54,12 @@ available_tools = {
 async def health_check():
     return {"status": "ok"}
 
+@app.post("/api/sessions")
+async def create_session():
+    import uuid
+    session_id = f"sess_{uuid.uuid4().hex[:12]}"
+    return {"session_id": session_id}
+
 def do_stream(messages: List[ChatCompletionMessageParam]):
     stream = client.chat.completions.create(
         messages=messages,

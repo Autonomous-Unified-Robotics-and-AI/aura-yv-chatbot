@@ -7,10 +7,43 @@ import { useScrollToBottom } from "@/hooks/use-scroll-to-bottom";
 import { ToolInvocation } from "ai";
 import { useChat } from "ai/react";
 import { toast } from "sonner";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 
 export function Chat() {
   const chatId = "001";
+  const [sessionId, setSessionId] = useState<string | null>(null);
+
+  // Create session on component mount
+  useEffect(() => {
+    const createSession = async () => {
+      try {
+        console.log("Creating session...");
+        const response = await fetch("/api/sessions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            user_agent: navigator.userAgent,
+            initial_context: {}
+          })
+        });
+        
+        console.log("Session creation response:", response.status);
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log("Session created:", data);
+          setSessionId(data.session_id);
+        } else {
+          const errorText = await response.text();
+          console.error("Session creation failed:", response.status, errorText);
+        }
+      } catch (error) {
+        console.error("Failed to create session:", error);
+      }
+    };
+    
+    createSession();
+  }, []);
 
   const {
     messages,
@@ -27,20 +60,32 @@ export function Chat() {
       const lastMessage = body.messages?.[body.messages.length - 1];
       
       if (lastMessage) {
-        // Convert AI SDK format to secure backend format
-        const secureBackendBody = {
-          message: lastMessage.content,
-          session_id: "sess_c7bff78b1af6" // Use the session we created
+        // Wait for session to be created if it's not ready yet
+        if (!sessionId) {
+          console.log("Session not ready, waiting...");
+          throw new Error("Session not ready");
+        }
+        
+        // Convert AI SDK format to backend format
+        const backendBody = {
+          session_id: sessionId,
+          message: lastMessage.content
         };
         
-        const response = await fetch("http://localhost:8000/api/chat", {
+        console.log("Sending request:", backendBody);
+        
+        const response = await fetch("/api/chat", {
           ...init,
-          body: JSON.stringify(secureBackendBody)
+          body: JSON.stringify(backendBody)
         });
+        
+        console.log("Response status:", response.status);
         
         if (response.ok) {
           const data = await response.json();
-          // Convert secure backend response to AI SDK streaming format
+          console.log("Response data:", data);
+          
+          // Convert backend response to AI SDK streaming format
           const encoder = new TextEncoder();
           const stream = new ReadableStream({
             start(controller) {
@@ -57,9 +102,11 @@ export function Chat() {
               'x-vercel-ai-data-stream': 'v1' 
             }
           });
+        } else {
+          const errorText = await response.text();
+          console.error("API Error:", response.status, errorText);
+          throw new Error(`API Error: ${response.status} - ${errorText}`);
         }
-        
-        return response;
       }
       
       return fetch(url, init);
@@ -74,8 +121,18 @@ export function Chat() {
     },
   });
 
-  const [messagesContainerRef, messagesEndRef] =
+  const [messagesContainerRef, messagesEndRef, scrollToBottom] =
     useScrollToBottom<HTMLDivElement>();
+
+  // Custom submit handler that scrolls to bottom when user sends a message
+  const handleCustomSubmit = useCallback((
+    event?: { preventDefault?: () => void },
+    chatRequestOptions?: any
+  ) => {
+    handleSubmit(event, chatRequestOptions);
+    // Scroll to bottom when user sends a message
+    setTimeout(() => scrollToBottom(), 100);
+  }, [handleSubmit, scrollToBottom]);
 
   return (
     <div className="flex flex-col min-w-0 h-[calc(100dvh-52px)] bg-background">
@@ -109,7 +166,7 @@ export function Chat() {
           chatId={chatId}
           input={input}
           setInput={setInput}
-          handleSubmit={handleSubmit}
+          handleSubmit={handleCustomSubmit}
           isLoading={isLoading}
           stop={stop}
           messages={messages}

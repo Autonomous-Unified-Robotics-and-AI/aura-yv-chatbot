@@ -76,14 +76,6 @@ npm run backend-secure
 ```bash
 npm run next-dev
 ```
-
-#### Option C: Use Original Python API (Development)
-
-If you want to use the original Python API instead of the secure backend:
-```bash
-npm run dev-original
-```
-
 ## Accessing the Application
 
 ### Frontend Application

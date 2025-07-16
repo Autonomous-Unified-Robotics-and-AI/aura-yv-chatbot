@@ -1,23 +1,14 @@
 "use client";
 
-import { Button } from "./ui/button";
-import { GitIcon, VercelIcon } from "./icons";
+import { YaleVenturesIcon } from "./icons";
 import Link from "next/link";
 
 export const Navbar = () => {
   return (
-    <div className="p-2 flex flex-row gap-2 justify-between">
-      <Link href="https://github.com/vercel-labs/ai-sdk-preview-python-streaming">
-        <Button variant="outline">
-          <GitIcon /> View Source Code
-        </Button>
-      </Link>
-
-      <Link href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fvercel-labs%2Fai-sdk-preview-python-streaming&env=OPENAI_API_KEY%2CVERCEL_FORCE_PYTHON_STREAMING&envDescription=API+keys+needed+for+application&envLink=https%3A%2F%2Fgithub.com%2Fvercel-labs%2Fai-sdk-preview-python-streaming%2Fblob%2Fmain%2F.env.example&teamSlug=vercel-labs">
-        <Button>
-          <VercelIcon />
-          Deploy with Vercel
-        </Button>
+    <div className="p-4 flex flex-row justify-center border-b">
+      <Link href="https://ventures.yale.edu" className="flex items-center hover:opacity-80 transition-opacity">
+        <YaleVenturesIcon size={32} />
+        <span className="text-xl font-bold text-primary ml-2">Yale Ventures</span>
       </Link>
     </div>
   );
