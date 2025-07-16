@@ -21,14 +21,24 @@ import { Textarea } from "./ui/textarea";
 
 const suggestedActions = [
   {
-    title: "What is the weather",
-    label: "in San Francisco?",
-    action: "What is the weather in San Francisco?",
+    title: "What funding opportunities",
+    label: "are available for early-stage startups?",
+    action: "What funding opportunities are available for early-stage startups?",
   },
   {
-    title: "How is python useful",
-    label: "for AI engineers?",
-    action: "How is python useful for AI engineers?",
+    title: "How can I validate",
+    label: "my startup idea?",
+    action: "How can I validate my startup idea?",
+  },
+  {
+    title: "What resources does",
+    label: "Yale Ventures provide?",
+    action: "What resources does Yale Ventures provide?",
+  },
+  {
+    title: "How do I build",
+    label: "a strong founding team?",
+    action: "How do I build a strong founding team?",
   },
 ];
 

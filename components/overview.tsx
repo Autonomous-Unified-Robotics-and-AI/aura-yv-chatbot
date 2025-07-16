@@ -1,8 +1,7 @@
 import { motion } from "framer-motion";
 import Link from "next/link";
 
-import { MessageIcon } from "./icons";
-import { LogoPython } from "@/app/icons";
+import { YaleVenturesIcon } from "./icons";
 
 export const Overview = () => {
   return (
@@ -15,50 +14,29 @@ export const Overview = () => {
       transition={{ delay: 0.5 }}
     >
       <div className="rounded-xl p-6 flex flex-col gap-8 leading-relaxed text-center max-w-xl">
-        <p className="flex flex-row justify-center gap-4 items-center">
-          <LogoPython size={32} />
-          <span>+</span>
-          <MessageIcon size={32} />
-        </p>
-        <p>
-          This is an{" "}
+        <div className="flex flex-row justify-center items-center">
+          <YaleVenturesIcon size={64} />
+        </div>
+        <div>
+          <h1 className="text-3xl font-bold text-primary mb-4">Welcome to Yale Ventures</h1>
+          <p className="text-lg text-muted-foreground mb-6">
+            Your AI-powered assistant for startup guidance and entrepreneurial support
+          </p>
+        </div>
+        <p className="text-base">
+          I'm here to help you navigate the entrepreneurial landscape with insights from{" "}
           <Link
-            className="font-medium underline underline-offset-4"
-            href="https://github.com/vercel-labs/ai-sdk-preview-python-streaming"
+            className="font-medium underline underline-offset-4 text-primary"
+            href="https://ventures.yale.edu"
             target="_blank"
           >
-            open source
-          </Link>{" "}
-          template that demonstrates the usage of{" "}
-          <Link
-            className="font-medium underline underline-offset-4"
-            href="https://sdk.vercel.ai/docs/ai-sdk-ui/stream-protocol#data-stream-protocol"
-            target="_blank"
-          >
-            Data Stream Protocol
-          </Link>{" "}
-          to stream chat completions from a Python function (
-          <Link
-            className="font-medium underline underline-offset-4"
-            href="https://fastapi.tiangolo.com"
-            target="_blank"
-          >
-            FastAPI
+            Yale Ventures
           </Link>
-          ) along with the
-          <code className="rounded-md bg-muted px-1 py-0.5">useChat</code> hook
-          on the client to create a seamless chat experience.
+          . Whether you're looking for funding opportunities, startup resources, or strategic guidance, 
+          I can provide personalized recommendations based on your needs and goals.
         </p>
-        <p>
-          You can learn more about the AI SDK by visiting the{" "}
-          <Link
-            className="font-medium underline underline-offset-4"
-            href="https://sdk.vercel.ai/docs"
-            target="_blank"
-          >
-            docs
-          </Link>
-          .
+        <p className="text-sm text-muted-foreground">
+          Start by asking me about funding opportunities, startup programs, or any entrepreneurial questions you have.
         </p>
       </div>
     </motion.div>
