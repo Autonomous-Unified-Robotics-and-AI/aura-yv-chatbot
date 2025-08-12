@@ -1,0 +1,27 @@
+
+> nextjs-fastapi@0.1.0 dev
+> npm run next-dev
+
+
+> nextjs-fastapi@0.1.0 next-dev
+> next dev -p 3000
+
+- ready started server on 0.0.0.0:3000, url: http://localhost:3000
+- [36minfo[39m Loaded env from /Users/liamhr/dev/aura-yv-chatbot/.env.local
+- [36minfo[39m Loaded env from /Users/liamhr/dev/aura-yv-chatbot/.env
+- [35mevent[39m compiled client and server successfully in 1608 ms (313 modules)
+- [36mwait[39m compiling...
+- [35mevent[39m compiled client and server successfully in 276 ms (313 modules)
+(node:45931) [DEP0060] DeprecationWarning: The `util._extend` API is deprecated. Please use Object.assign() instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+- [36mwait[39m compiling /(chat)/page (client and server)...
+Browserslist: caniuse-lite is outdated. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+- [35mevent[39m compiled client and server successfully in 9.9s (2627 modules)
+- [36mwait[39m compiling...
+- [35mevent[39m compiled successfully in 334 ms (1350 modules)
+
+
+- [33mwarn[39m metadata.metadataBase is not set for resolving social open graph or twitter images, fallbacks to "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+[?25h

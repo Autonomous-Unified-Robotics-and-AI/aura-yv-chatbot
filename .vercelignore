@@ -1,0 +1,49 @@
+# Yale Ventures backend (too large for Vercel)
+yale-ventures-backend-secure/
+yale-ventures-backend-secure
+
+# Development files
+README.md
+.gitignore
+.gitattributes
+
+# Build artifacts
+node_modules/
+.next/
+out/
+build/
+
+# Environment files
+.env*
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+*.egg-info/
+.pytest_cache/

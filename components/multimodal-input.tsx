@@ -21,24 +21,24 @@ import { Textarea } from "./ui/textarea";
 
 const suggestedActions = [
   {
-    title: "What funding opportunities",
-    label: "are available for early-stage startups?",
-    action: "What funding opportunities are available for early-stage startups?",
+    title: "Is my idea patentable at Yale?",
+    label: "Show me the first steps.",
+    action: "Is my idea patentable at Yale? Show me the first steps.",
   },
   {
-    title: "How can I validate",
-    label: "my startup idea?",
-    action: "How can I validate my startup idea?",
+    title: "Match me to people and programs.",
+    label: "Connect me with wthe right mentor (EIR),\n licensing lead or accelerator fund.",
+    action: "Match me to people and programs. Connect me with wthe right mentor (EIR), licensing lead or accelerator fund.",
   },
   {
-    title: "What resources does",
-    label: "Yale Ventures provide?",
-    action: "What resources does Yale Ventures provide?",
+    title: "Do I need an NDA/ MTA before sharing?",
+    label: "Get the right agreement for companies, vendors, and collaborators.",
+    action: "Do I need an NDA/ MTA before sharing? Get the right agreement for companies, vendors, and collaborators.",
   },
   {
-    title: "How do I build",
-    label: "a strong founding team?",
-    action: "How do I build a strong founding team?",
+    title: "What funding and support do I have access to?",
+    label: "Accelerators, grants, prototyping help, investor networks.",
+    action: "What funding and support do I have access to? Accelerators, grants, prototyping help, investor networks.",
   },
 ];
 
@@ -127,7 +127,7 @@ export function MultimodalInput({
   return (
     <div className="relative w-full flex flex-col gap-4">
       {messages.length === 0 && (
-        <div className="grid sm:grid-cols-2 gap-2 w-full">
+        <div className="grid sm:grid-cols-2 gap-2 w-full auto-rows-fr">
           {suggestedActions.map((suggestedAction, index) => (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -145,10 +145,10 @@ export function MultimodalInput({
                     content: suggestedAction.action,
                   });
                 }}
-                className="text-left border rounded-xl px-4 py-3.5 text-sm flex-1 gap-1 sm:flex-col w-full h-auto justify-start items-start"
+                className="text-left border rounded-xl px-4 py-3.5 text-sm flex-1 gap-2 flex-col w-full h-full justify-start items-start whitespace-normal"
               >
-                <span className="font-medium">{suggestedAction.title}</span>
-                <span className="text-muted-foreground">
+                <span className="font-medium text-wrap">{suggestedAction.title}</span>
+                <span className="text-muted-foreground text-wrap whitespace-pre-line">
                   {suggestedAction.label}
                 </span>
               </Button>

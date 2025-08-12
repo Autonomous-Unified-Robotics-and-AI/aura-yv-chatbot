@@ -14,17 +14,16 @@ export const Overview = () => {
       transition={{ delay: 0.5 }}
     >
       <div className="rounded-xl p-6 flex flex-col gap-8 leading-relaxed text-center max-w-xl">
-        <div className="flex flex-row justify-center items-center">
-          <YaleVenturesIcon size={64} />
+        <div className="flex flex-row justify-center items-center mb-4">
+          <YaleVenturesIcon size={250} />
         </div>
         <div>
-          <h1 className="text-3xl font-bold text-primary mb-4">Welcome to Yale Ventures</h1>
           <p className="text-lg text-muted-foreground mb-6">
             Your AI-powered assistant for startup guidance and entrepreneurial support
           </p>
         </div>
         <p className="text-base">
-          I'm here to help you navigate the entrepreneurial landscape with insights from{" "}
+          I&apos;m here to help you navigate the entrepreneurial landscape with insights from{" "}
           <Link
             className="font-medium underline underline-offset-4 text-primary"
             href="https://ventures.yale.edu"
@@ -32,7 +31,7 @@ export const Overview = () => {
           >
             Yale Ventures
           </Link>
-          . Whether you're looking for funding opportunities, startup resources, or strategic guidance, 
+          . Whether you&apos;re looking for funding opportunities, startup resources, or strategic guidance, 
           I can provide personalized recommendations based on your needs and goals.
         </p>
         <p className="text-sm text-muted-foreground">
