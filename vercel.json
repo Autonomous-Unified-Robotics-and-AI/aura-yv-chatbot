@@ -1,11 +1,39 @@
 {
+  "buildCommand": "prisma generate && npm run build",
+  "outputDirectory": ".next",
+  "framework": "nextjs",
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "https://aurarag-production.up.railway.app/api/$1"
+      "source": "/api/chat",
+      "destination": "https://aurarag-production.up.railway.app/api/chat"
+    },
+    {
+      "source": "/api/data-extraction",
+      "destination": "https://aurarag-production.up.railway.app/api/data-extraction"
     }
   ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        }
+      ]
+    }
+  ],
+  "functions": {
+    "app/**": {
+      "maxDuration": 30
+    }
+  },
   "env": {
-    "BACKEND_URL": "https://aurarag-production.up.railway.app"
+    "BACKEND_URL": "https://aurarag-production.up.railway.app",
+    "NODE_ENV": "production"
   }
 }

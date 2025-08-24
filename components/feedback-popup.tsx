@@ -41,9 +41,8 @@ export function FeedbackPopup({ isOpen, onClose, sessionId }: FeedbackPopupProps
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
-  const backendUrl = process.env.NODE_ENV === 'development' 
-    ? 'http://localhost:8000' 
-    : '';
+  // Use frontend API endpoint instead of backend
+  const apiUrl = '/api/feedback';
 
   // Validation function to check if form is ready for submission
   const isFormValid = () => {
@@ -104,7 +103,9 @@ export function FeedbackPopup({ isOpen, onClose, sessionId }: FeedbackPopupProps
     setIsSubmitting(true);
     
     try {
-      const response = await fetch(`${backendUrl}/api/feedback`, {
+      console.log('Submitting feedback with session:', sessionId);
+      
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -116,7 +117,12 @@ export function FeedbackPopup({ isOpen, onClose, sessionId }: FeedbackPopupProps
         }),
       });
 
+      console.log('Feedback response status:', response.status);
+      
       if (response.ok) {
+        const result = await response.json();
+        console.log('Feedback submitted successfully:', result);
+        
         setIsSubmitted(true);
         toast.success("Thank you for your feedback!");
         setTimeout(() => {
@@ -135,11 +141,40 @@ export function FeedbackPopup({ isOpen, onClose, sessionId }: FeedbackPopupProps
           });
         }, 2000);
       } else {
-        throw new Error('Failed to submit feedback');
+        // Try to get more detailed error information
+        let errorMessage = 'Failed to submit feedback. Please try again.';
+        try {
+          const errorData = await response.json();
+          console.error('Server error response:', errorData);
+          
+          if (errorData.message) {
+            errorMessage = errorData.message;
+          } else if (errorData.error) {
+            errorMessage = errorData.error;
+          }
+        } catch (parseError) {
+          // If we can't parse the error response, use the status text
+          console.error('Could not parse error response:', parseError);
+          errorMessage = `Server error (${response.status}): ${response.statusText}`;
+        }
+        
+        throw new Error(errorMessage);
       }
     } catch (error) {
       console.error('Feedback submission error:', error);
-      toast.error("Failed to submit feedback. Please try again.");
+      
+      // Show more specific error messages
+      if (error instanceof Error) {
+        if (error.message.includes('network') || error.message.includes('fetch')) {
+          toast.error("Network error. Please check your connection and try again.");
+        } else if (error.message.includes('database')) {
+          toast.error("Database issue. Please try again in a moment.");
+        } else {
+          toast.error(error.message);
+        }
+      } else {
+        toast.error("Failed to submit feedback. Please try again.");
+      }
     } finally {
       setIsSubmitting(false);
     }

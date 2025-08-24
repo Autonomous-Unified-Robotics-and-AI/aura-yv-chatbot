@@ -222,6 +222,35 @@ async def handle_chat_data(request: Request, protocol: str = Query('data')):
                         timeout=30.0
                     )
                     
+                    # If session not found, create a new session and retry
+                    if chat_response.status_code == 404:
+                        try:
+                            # Create a new session
+                            session_response = await client.post(
+                                f"{backend_url}/sessions",
+                                json={},
+                                headers={"Content-Type": "application/json"},
+                                timeout=30.0
+                            )
+                            if session_response.status_code == 200:
+                                session_data = session_response.json()
+                                new_session_id = session_data.get("session_id")
+                                
+                                # Retry with new session
+                                chat_response = await client.post(
+                                    f"{backend_url}/chat",
+                                    json={
+                                        "session_id": new_session_id,
+                                        "message": message_content
+                                    },
+                                    headers={"Content-Type": "application/json"},
+                                    timeout=30.0
+                                )
+                        except Exception as retry_error:
+                            print(f"Error creating new session: {retry_error}")
+                            # Fall back to original implementation
+                            raise Exception("Backend session retry failed")
+                    
                     if chat_response.status_code == 200:
                         backend_data = chat_response.json()
                         response_text = backend_data.get("response", "")

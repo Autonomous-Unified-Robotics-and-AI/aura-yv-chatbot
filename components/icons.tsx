@@ -1,3 +1,5 @@
+import Image from 'next/image';
+
 export const BotIcon = () => {
   return (
     <svg
@@ -77,11 +79,11 @@ export const VercelIcon = ({ size = 17 }: { size?: number }) => {
 
 export const YaleVenturesIcon = ({ size = 24 }: { size?: number }) => {
   return (
-    <img
+    <Image
       src="/yale-ventures-logo.png"
       alt="Yale Ventures Logo"
       width={size}
-      height={size * 0.4} // Maintain aspect ratio based on the stacked logo
+      height={Math.round(size * 0.4)} // Maintain aspect ratio based on the stacked logo
       className="object-contain"
       style={{ filter: 'none' }}
     />

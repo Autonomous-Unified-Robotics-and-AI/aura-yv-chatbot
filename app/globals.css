@@ -91,3 +91,27 @@
         @apply bg-foreground/20 animate-pulse;
     }
 }
+
+/* Wave animation for thinking dots */
+@keyframes wave {
+    0%, 100% {
+        height: 8px;
+        opacity: 0.3;
+    }
+    50% {
+        height: 12px;
+        opacity: 1;
+    }
+}
+
+/* Ellipse wave animation for thinking dots */
+@keyframes ellipseWave {
+    0%, 100% {
+        transform: translateY(0px);
+        opacity: 0.3;
+    }
+    50% {
+        transform: translateY(-4px);
+        opacity: 1;
+    }
+}

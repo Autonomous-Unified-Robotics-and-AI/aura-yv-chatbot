@@ -1,7 +1,4 @@
 import { motion } from "framer-motion";
-import Link from "next/link";
-
-import { YaleVenturesIcon } from "./icons";
 
 export const Overview = () => {
   return (
@@ -13,30 +10,12 @@ export const Overview = () => {
       exit={{ opacity: 0, scale: 0.98 }}
       transition={{ delay: 0.5 }}
     >
-      <div className="rounded-xl p-6 flex flex-col gap-8 leading-relaxed text-center max-w-xl">
-        <div className="flex flex-row justify-center items-center mb-4">
-          <YaleVenturesIcon size={250} />
-        </div>
+      <div className="rounded-xl p-6 flex flex-col gap-4 leading-relaxed text-center max-w-xl">
         <div>
-          <p className="text-lg text-muted-foreground mb-6">
-            Your AI-powered assistant for startup guidance and entrepreneurial support
+          <p className="text-lg text-muted-foreground mb-3">
+            Looking to launch, grow, or fund your venture at Yale? I&apos;m your go-to AI assistant—here to help you navigate Yale&apos;s entrepreneurial ecosystem.
           </p>
         </div>
-        <p className="text-base">
-          I&apos;m here to help you navigate the entrepreneurial landscape with insights from{" "}
-          <Link
-            className="font-medium underline underline-offset-4 text-primary"
-            href="https://ventures.yale.edu"
-            target="_blank"
-          >
-            Yale Ventures
-          </Link>
-          . Whether you&apos;re looking for funding opportunities, startup resources, or strategic guidance, 
-          I can provide personalized recommendations based on your needs and goals.
-        </p>
-        <p className="text-sm text-muted-foreground">
-          Start by asking me about funding opportunities, startup programs, or any entrepreneurial questions you have.
-        </p>
       </div>
     </motion.div>
   );

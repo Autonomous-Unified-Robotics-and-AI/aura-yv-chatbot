@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -80,17 +80,17 @@ export function AdminDashboard({ token, onSignOut }: AdminDashboardProps) {
 
   const backendUrl = process.env.NODE_ENV === 'development' ? 'http://localhost:8000' : '';
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
 
-      // Fetch user data, stats, and feedback in parallel
+      // Fetch user data, stats, and feedback in parallel - all from local database now
       const [userResponse, statsResponse, feedbackResponse] = await Promise.all([
-        fetch(`${backendUrl}/api/admin/user-data`, {
+        fetch(`/api/admin/user-data`, {
           headers: { 'Authorization': `Bearer ${token}` }
         }),
-        fetch(`${backendUrl}/api/admin/stats`, {
+        fetch(`/api/admin/stats`, {
           headers: { 'Authorization': `Bearer ${token}` }
         }),
         fetch(`/api/admin/feedback`, {
@@ -125,7 +125,7 @@ export function AdminDashboard({ token, onSignOut }: AdminDashboardProps) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [token, onSignOut]);
 
   const exportData = async (format: 'json' | 'csv') => {
     try {
@@ -165,7 +165,7 @@ export function AdminDashboard({ token, onSignOut }: AdminDashboardProps) {
     // Refresh data every 30 seconds
     const interval = setInterval(fetchData, 30000);
     return () => clearInterval(interval);
-  }, [token]);
+  }, [token, fetchData]);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString();

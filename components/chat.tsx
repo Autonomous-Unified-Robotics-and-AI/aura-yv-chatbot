@@ -4,6 +4,7 @@ import { PreviewMessage, ThinkingMessage } from "@/components/message";
 import { MultimodalInput } from "@/components/multimodal-input";
 import { Overview } from "@/components/overview";
 import { FeedbackButton } from "@/components/feedback-button";
+import { ArtifactWidget, convertBackendCitations } from "@/components/artifact-widget";
 import { useScrollToBottom } from "@/hooks/use-scroll-to-bottom";
 import { ToolInvocation } from "ai";
 import { useChat } from "ai/react";
@@ -49,76 +50,23 @@ export function Chat() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [cookieConsent, setCookieConsent] = useState<boolean | null>(null);
   const [showResetButton, setShowResetButton] = useState(false);
+  const [pendingCitations, setPendingCitations] = useState<any[]>([]);
+  const [currentMessageId, setCurrentMessageId] = useState<string | null>(null);
+  const [messageCitations, setMessageCitations] = useState<Record<string, any[]>>({});
+  const [backendCitationsLoaded, setBackendCitationsLoaded] = useState(false);
 
-  // Check for existing session and cookie consent on mount
-  useEffect(() => {
-    const checkExistingSession = async () => {
-      console.log("=== INITIALIZING APP ===");
-      console.log("All cookies:", document.cookie);
-      
-      // Check cookie consent first
-      const consentValue = getCookie('cookie-consent');
-      console.log("Cookie consent value found:", consentValue);
-      
-      if (consentValue) {
-        // Only set consent state if user has previously made a choice
-        const hasConsent = consentValue === 'accepted';
-        console.log("Found existing consent, setting to:", hasConsent);
-        setCookieConsent(hasConsent);
-        
-        if (hasConsent) {
-          // Try to restore existing session from cookie
-          const existingSessionId = getCookie('yale-ventures-session');
-          console.log("Existing session ID from cookie:", existingSessionId);
-          if (existingSessionId) {
-            // Validate session is still active
-            try {
-              const response = await fetch(`/api/sessions/${existingSessionId}`);
-              if (response.ok) {
-                console.log("Restored existing session:", existingSessionId);
-                setSessionId(existingSessionId);
-                
-                // Restore conversation history
-                try {
-                  const historyResponse = await fetch(`/api/sessions/${existingSessionId}/history`);
-                  if (historyResponse.ok) {
-                    const historyData = await historyResponse.json();
-                    if (historyData.messages && historyData.messages.length > 0) {
-                      setMessages(historyData.messages);
-                      console.log("Restored conversation history:", historyData.messages.length, "messages");
-                    }
-                  }
-                } catch (historyError) {
-                  console.log("Failed to restore conversation history:", historyError);
-                }
-                
-                return; // Exit early - don't create new session
-              } else {
-                // Session expired, remove cookie
-                deleteCookie('yale-ventures-session');
-              }
-            } catch (error) {
-              console.log("Session validation failed, creating new session");
-              deleteCookie('yale-ventures-session');
-            }
-          }
-          
-          // Only create new session if user has consented and no valid session exists
-          await createNewSession();
-        }
-      } else {
-        console.log("No consent cookie found - banner should show");
-        // Don't create a session yet - wait for user consent
-      }
-    };
 
-    checkExistingSession();
-  }, []);
 
-  const createNewSession = async () => {
+  const createNewSession = useCallback(async () => {
     try {
       console.log("Creating new session...");
-      const response = await fetch("/api/sessions", {
+      
+      // Determine which API to use based on environment
+      const backendUrl = process.env.NODE_ENV === 'development' 
+        ? 'http://localhost:8000' 
+        : 'https://aurarag-production.up.railway.app';
+      
+      const response = await fetch(`${backendUrl}/api/sessions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -137,11 +85,51 @@ export function Chat() {
       } else {
         const errorText = await response.text();
         console.error("Session creation failed:", response.status, errorText);
+        
+        // Fallback: try local Next.js API if backend fails
+        if (!response.ok && response.status >= 500) {
+          console.log("Trying local Next.js API fallback...");
+          const fallbackResponse = await fetch("/api/sessions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              user_agent: navigator.userAgent,
+              initial_context: {}
+            })
+          });
+          
+          if (fallbackResponse.ok) {
+            const fallbackData = await fallbackResponse.json();
+            console.log("Session created via fallback:", fallbackData);
+            setSessionId(fallbackData.session_id);
+          }
+        }
       }
     } catch (error) {
       console.error("Failed to create session:", error);
+      
+      // Final fallback: try local Next.js API
+      try {
+        console.log("Trying local Next.js API as final fallback...");
+        const fallbackResponse = await fetch("/api/sessions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            user_agent: navigator.userAgent,
+            initial_context: {}
+          })
+        });
+        
+        if (fallbackResponse.ok) {
+          const fallbackData = await fallbackResponse.json();
+          console.log("Session created via final fallback:", fallbackData);
+          setSessionId(fallbackData.session_id);
+        }
+      } catch (fallbackError) {
+        console.error("All session creation methods failed:", fallbackError);
+      }
     }
-  };
+  }, [cookieConsent]);
 
   const handleCookieConsent = async (accepted: boolean) => {
     console.log("=== HANDLING COOKIE CONSENT ===");
@@ -177,51 +165,148 @@ export function Chat() {
   };
 
   const resetConversation = async () => {
-    try {
-      // Delete current session
-      if (sessionId && cookieConsent) {
-        deleteCookie('yale-ventures-session');
+    if (sessionId) {
+      try {
+        const backendUrl = process.env.NODE_ENV === 'development' 
+          ? 'http://localhost:8000' 
+          : 'https://aurarag-production.up.railway.app';
+        
+        const response = await fetch(`${backendUrl}/api/sessions/${sessionId}/reset`, {
+          method: 'POST'
+        });
+        
+        if (response.ok) {
+          console.log("Conversation reset successfully");
+          setMessages([]);
+          setPendingCitations([]);
+          setMessageCitations({});
+          setCurrentMessageId(null);
+        } else {
+          console.error("Failed to reset conversation");
+        }
+      } catch (error) {
+        console.error("Error resetting conversation:", error);
       }
-      
-      // Clear messages
-      setMessages([]);
-      setSessionId(null);
-      
-      // Create new session
-      await createNewSession();
-      
-      console.log("Conversation reset successfully");
-    } catch (error) {
-      console.error("Failed to reset conversation:", error);
     }
   };
 
   const clearChat = async () => {
-    try {
-      console.log("Clearing chat - removing cookies and creating new session");
-      
-      // Clear messages from UI
-      setMessages([]);
-      
-      // Remove session cookie (but keep database record intact)
-      if (cookieConsent) {
-        deleteCookie('yale-ventures-session');
-        console.log("Removed session cookie");
+    console.log("Clearing chat and citations...");
+    
+    // First, clear the frontend state immediately for responsive UI
+    setMessages([]);
+    setPendingCitations([]);
+    setMessageCitations({});
+    setCurrentMessageId('');
+    
+    // Then, reset the backend session to ensure conversation is truly cleared
+    if (sessionId) {
+      try {
+        console.log("Resetting backend session:", sessionId);
+        await resetConversation();
+        console.log("Backend session reset successfully");
+        
+        // Ensure we clear any cached citation data for this session 
+        // (in case there are any lingering references)
+        setMessageCitations({});
+        setPendingCitations([]);
+        
+      } catch (error) {
+        console.error("Failed to reset backend session:", error);
+        // Note: We still keep the frontend cleared even if backend fails
+        // Show user feedback about the error
+        console.warn("Frontend cleared but backend reset failed. The conversation should still be cleared on page reload.");
       }
+    } else {
+      console.warn("No session ID available - only frontend cleared");
+    }
+    
+    console.log("Chat and citations cleared completely");
+  };
+
+  // Load citation history for existing session
+  const loadCitationHistory = async (sessionId: string) => {
+    console.log("🔄 loadCitationHistory called for session:", sessionId);
+    try {
+      const backendUrl = process.env.NODE_ENV === 'development' 
+        ? 'http://localhost:8000' 
+        : 'https://aurarag-production.up.railway.app';
       
-      // Reset session ID to trigger new session creation
-      setSessionId(null);
-      
-      // Create a fresh session (this preserves the old session in the database)
-      await createNewSession();
-      
-      console.log("Chat cleared successfully - new session started");
+      const response = await fetch(`${backendUrl}/api/sessions/${sessionId}/messages`);
+      if (response.ok) {
+        const data = await response.json();
+        console.log("Loaded session messages:", data);
+        
+        // Convert backend messages to frontend format and load them
+        const frontendMessages = [];
+        const citationsMap: Record<string, any[]> = {};
+        
+        // Process messages and group citations by message content hash
+        for (let i = 0; i < data.messages.length; i++) {
+          const message = data.messages[i];
+          
+          // Convert backend message to frontend Message format
+          const frontendMessage = {
+            id: message.id,
+            role: message.role as 'user' | 'assistant',
+            content: message.content,
+            createdAt: new Date(message.created_at)
+          };
+          frontendMessages.push(frontendMessage);
+          
+          // Load citations for assistant messages
+          if (message.role === 'assistant' && message.citations_count > 0) {
+            try {
+              const citationResponse = await fetch(`${backendUrl}/api/messages/${message.id}/citations`);
+              if (citationResponse.ok) {
+                const citationData = await citationResponse.json();
+                console.log(`Citations for message ${message.id}:`, citationData);
+                
+                if (citationData.citations && citationData.citations.length > 0) {
+                  const formattedCitations = citationData.citations.map((citation: any) => ({
+                    rank: citation.rank,
+                    document: citation.document,
+                    relevance_score: citation.relevance_score,
+                    content: citation.content,
+                    metadata: citation.metadata,
+                    messageId: citation.message_id,
+                    userMessage: citation.message_content,
+                    aiResponse: citation.message_role === 'assistant' ? citation.message_content : ''
+                  }));
+                  
+                  // Store citations using both the backend message ID and content hash for fallback
+                  citationsMap[message.id] = formattedCitations;
+                  
+                  // Create content hash as fallback key for matching with frontend messages
+                  const contentHash = message.content.substring(0, 50).replace(/[^a-zA-Z0-9]/g, '');
+                  citationsMap[`content_${contentHash}`] = formattedCitations;
+                  
+                  console.log(`Stored ${formattedCitations.length} citations for message ${message.id}`);
+                }
+              }
+            } catch (err) {
+              console.warn('Failed to load citations for message:', err);
+            }
+          }
+        }
+        
+        // Note: We can't directly setMessages because useChat manages its own state
+        // Instead, we'll rely on the citation mapping to work with whatever messages exist
+        console.log(`Found ${frontendMessages.length} backend messages, citations mapped by content hash`);
+        
+        console.log("📊 Final citations map:", citationsMap);
+        console.log("📊 Citations map keys:", Object.keys(citationsMap));
+        console.log("📊 Total citations loaded:", Object.values(citationsMap).flat().length);
+        setMessageCitations(citationsMap);
+        setBackendCitationsLoaded(true);
+        console.log("✅ Backend citations loaded successfully");
+      }
     } catch (error) {
-      console.error("Failed to clear chat:", error);
-      // Fallback: just clear messages if session creation fails
-      setMessages([]);
+      console.warn('Failed to load citation history:', error);
     }
   };
+
+
 
   // Key combination to show reset button (Ctrl+Shift+R)
   useEffect(() => {
@@ -257,7 +342,8 @@ export function Chat() {
     isLoading,
     stop,
   } = useChat({
-    fetch: async (url, init) => {
+    fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input.toString();
       const body = JSON.parse(init?.body as string || '{}');
       const lastMessage = body.messages?.[body.messages.length - 1];
       
@@ -302,6 +388,123 @@ export function Chat() {
             const data = await response.json();
             console.log("Response data:", data);
             
+            // Store citations for display
+            if (data.citations && Array.isArray(data.citations) && data.citations.length > 0) {
+              console.log("=== CITATIONS RECEIVED FROM BACKEND ===");
+              console.log("Raw citations data:", data.citations);
+              console.log("Citations count:", data.citations.length);
+              
+              const formattedCitations = convertBackendCitations(data.citations);
+              console.log("Formatted citations:", formattedCitations);
+              
+              // Store citations with response content hash for reliable matching
+              const responseContent = data.response || '';
+              const contentHash = responseContent.substring(0, 50).replace(/[^a-zA-Z0-9]/g, '');
+              
+              const enhancedCitations = formattedCitations.map(citation => ({
+                ...citation,
+                userMessage: messages[messages.length - 1]?.content || 'Previous question', // Get user's question
+                aiResponse: responseContent // Store the AI's response
+              }));
+              
+              // Store citations immediately using content hash
+              const contentKey = `content_${contentHash}`;
+              setMessageCitations(prev => {
+                const updated = { ...prev, [contentKey]: enhancedCitations };
+                console.log(`Stored citations with content key: ${contentKey}`, updated);
+                return updated;
+              });
+              
+              // Display citations immediately
+              setPendingCitations(enhancedCitations);
+              console.log("Enhanced citations stored immediately:", enhancedCitations);
+              
+              // Try to link to the actual AI message when it becomes available
+              let retryCount = 0;
+              const maxRetries = 10;
+              
+              const linkCitationsToMessage = () => {
+                setTimeout(() => {
+                  // Look for a message with matching content
+                  const matchingMessage = messages.find((msg: any) => 
+                    msg.role === 'assistant' && 
+                    msg.content && 
+                    responseContent.length > 100 &&
+                    msg.content.includes(responseContent.substring(0, 100))
+                  );
+                  
+                  if (matchingMessage && matchingMessage.id) {
+                    console.log(`Found matching AI message with ID: ${matchingMessage.id}`);
+                    
+                    // Store citations with the actual message ID
+                    setMessageCitations(prev => {
+                      const updated = { ...prev };
+                      updated[matchingMessage.id] = enhancedCitations.map(citation => ({
+                        ...citation,
+                        messageId: matchingMessage.id
+                      }));
+                      console.log(`Linked citations to message ID ${matchingMessage.id}:`, updated);
+                      return updated;
+                    });
+                    
+                    // Clear pending citations since they're now properly stored
+                    setPendingCitations([]);
+                    console.log(`Successfully linked citations to AI message: ${matchingMessage.id}`);
+                  } else if (retryCount < maxRetries) {
+                    retryCount++;
+                    console.log(`Retry ${retryCount}/${maxRetries}: AI message not found yet, retrying...`);
+                    linkCitationsToMessage();
+                  } else {
+                    console.log(`Max retries reached. Keeping citations with content key: ${contentKey}`);
+                  }
+                }, 100 * (retryCount + 1)); // Exponential backoff
+              };
+              
+              linkCitationsToMessage();
+            } else {
+              console.log("=== NO CITATIONS IN BACKEND RESPONSE ===");
+              console.log("Response data keys:", Object.keys(data));
+              console.log("Citations field:", data.citations);
+              console.log("Response field:", data.response);
+              console.log("Full response data:", data);
+            }
+            
+            // Sync user data extracted by backend to frontend database
+            try {
+              console.log("Syncing user data from backend response...");
+              
+              // First, get the current backend session data to extract user info
+              const backendSessionResponse = await fetch(`${backendUrl}/api/sessions/${sessionId}`);
+              if (backendSessionResponse.ok) {
+                const backendSessionData = await backendSessionResponse.json();
+                console.log("Backend session data:", backendSessionData);
+                
+                // Sync the data to frontend database
+                const syncResponse = await fetch('/api/sessions/sync-data', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    session_id: sessionId,
+                    backend_session_data: backendSessionData,
+                    extracted_data: null // Backend handles extraction internally
+                  })
+                });
+                
+                if (syncResponse.ok) {
+                  const syncResult = await syncResponse.json();
+                  console.log("User data sync result:", syncResult);
+                } else {
+                  console.warn("Failed to sync user data:", await syncResponse.text());
+                }
+              } else {
+                console.warn("Failed to fetch backend session data for sync");
+              }
+            } catch (syncError) {
+              console.warn("User data sync failed:", syncError);
+              // Don't let sync failures break the chat flow
+            }
+            
+            // Create a simple streaming response that the AI SDK can handle
             const encoder = new TextEncoder();
             const stream = new ReadableStream({
               start(controller) {
@@ -329,23 +532,166 @@ export function Chat() {
       return fetch(url, init);
     },
     maxSteps: 4,
-    onError: (error) => {
+    onError: (error: Error) => {
       if (error.message.includes("Too many requests")) {
         toast.error(
           "You are sending too many messages. Please try again later.",
         );
       }
     },
+    onFinish: (message: any) => {
+      // Store citations for the last assistant message if available
+      if (message.role === 'assistant' && message.id && message.content) {
+        console.log("Message finished:", message.id, message.content);
+        
+        // Try to link any pending citations to this message
+        setTimeout(() => {
+          const messageContent = message.content || '';
+          const contentHash = messageContent.substring(0, 50).replace(/[^a-zA-Z0-9]/g, '');
+          const contentKey = `content_${contentHash}`;
+          
+          setMessageCitations(prev => {
+            const updated = { ...prev };
+            
+            // If we have citations stored with content hash, link them to the message ID
+            if (updated[contentKey]) {
+              const citations = updated[contentKey];
+              updated[message.id] = citations.map(citation => ({
+                ...citation,
+                messageId: message.id
+              }));
+              console.log(`onFinish: Linked citations from ${contentKey} to message ID ${message.id}`);
+            }
+            
+            return updated;
+          });
+          
+          // Clear pending citations if they match this message
+          setPendingCitations(prev => {
+            const shouldClear = prev.some(citation => 
+              citation.aiResponse && messageContent.includes(citation.aiResponse.substring(0, 100))
+            );
+            if (shouldClear) {
+              console.log("onFinish: Cleared pending citations for message", message.id);
+              return [];
+            }
+            return prev;
+          });
+        }, 100);
+      }
+    }
   });
+
+  // Check for existing session and cookie consent on mount
+  useEffect(() => {
+    const checkExistingSession = async () => {
+      console.log("=== INITIALIZING APP ===");
+      console.log("All cookies:", document.cookie);
+      
+      // Check if we should clear chat (coming from admin page)
+      const urlParams = new URLSearchParams(window.location.search);
+      const shouldClear = urlParams.get('clear') === 'true';
+      
+      if (shouldClear) {
+        console.log("Clear parameter detected, clearing chat and creating new session");
+        // Clear URL parameter
+        window.history.replaceState({}, document.title, window.location.pathname);
+        // Clear any existing session cookie
+        deleteCookie('yale-ventures-session');
+        // Clear messages
+        setMessages([]);
+        // Create new session
+        await createNewSession();
+        return;
+      }
+      
+      // Check cookie consent first
+      const consentValue = getCookie('cookie-consent');
+      console.log("Cookie consent value found:", consentValue);
+      
+      if (consentValue) {
+        // Only set consent state if user has previously made a choice
+        const hasConsent = consentValue === 'accepted';
+        console.log("Found existing consent, setting to:", hasConsent);
+        setCookieConsent(hasConsent);
+        
+        if (hasConsent) {
+          // Try to restore existing session from cookie
+          const existingSessionId = getCookie('yale-ventures-session');
+          console.log("Existing session ID from cookie:", existingSessionId);
+          if (existingSessionId) {
+            // Validate session is still active - try backend first
+            try {
+              const backendUrl = process.env.NODE_ENV === 'development' 
+                ? 'http://localhost:8000' 
+                : 'https://aurarag-production.up.railway.app';
+              
+              let response = await fetch(`${backendUrl}/api/sessions/${existingSessionId}`);
+              
+              // If backend fails, try local Next.js API as fallback
+              if (!response.ok && response.status >= 500) {
+                console.log("Backend session check failed, trying local API...");
+                response = await fetch(`/api/sessions/${existingSessionId}`);
+              }
+              
+              if (response.ok) {
+                console.log("Restored existing session:", existingSessionId);
+                setSessionId(existingSessionId);
+                
+                // Note: Conversation history restoration might not work with Railway backend
+                // This is typically handled differently in the backend
+                try {
+                  const historyResponse = await fetch(`/api/sessions/${existingSessionId}/history`);
+                  if (historyResponse.ok) {
+                    const historyData = await historyResponse.json();
+                    if (historyData.messages && historyData.messages.length > 0) {
+                      setMessages(historyData.messages);
+                      console.log("Restored conversation history:", historyData.messages.length, "messages");
+                    }
+                  }
+                } catch (historyError) {
+                  console.log("Failed to restore conversation history:", historyError);
+                }
+                
+                // Load citation history for existing session
+                await loadCitationHistory(existingSessionId);
+                
+                return; // Exit early - don't create new session
+              } else {
+                // Session expired, remove cookie
+                console.log("Session not found or expired, removing cookie");
+                deleteCookie('yale-ventures-session');
+              }
+            } catch (error) {
+              console.log("Session validation failed:", error);
+              deleteCookie('yale-ventures-session');
+            }
+          }
+          
+          // Only create new session if user has consented and no valid session exists
+          await createNewSession();
+        }
+      } else {
+        console.log("No consent cookie found - banner should show");
+        // Don't create a session yet - wait for user consent
+      }
+    };
+
+    checkExistingSession();
+  }, [createNewSession, setMessages]);
 
   const [messagesContainerRef, messagesEndRef, scrollToBottom] =
     useScrollToBottom<HTMLDivElement>();
+
 
   // Custom submit handler that scrolls to bottom when user sends a message
   const handleCustomSubmit = useCallback((
     event?: { preventDefault?: () => void },
     chatRequestOptions?: any
   ) => {
+    // Clear previous citations when user sends a new message
+    setPendingCitations([]);
+    
     handleSubmit(event, chatRequestOptions);
     // Scroll to bottom when user sends a message
     setTimeout(() => scrollToBottom(), 100);
@@ -402,7 +748,7 @@ export function Chat() {
 
         {/* Clear Chat Button - shown when there are messages */}
         {messages.length > 0 && (
-          <div className="absolute top-4 right-4 z-30">
+          <div className="absolute top-4 right-4 z-30 flex gap-2">
             <button
               onClick={clearChat}
               className="px-3 py-2 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md shadow-sm hover:shadow-md transition-all duration-200 border border-gray-200 flex items-center gap-2"
@@ -416,14 +762,167 @@ export function Chat() {
           </div>
         )}
 
-        {messages.map((message, index) => (
-          <PreviewMessage
-            key={message.id}
-            chatId={chatId}
-            message={message}
-            isLoading={isLoading && messages.length - 1 === index}
-          />
+        {messages.map((message: any, index: number) => (
+          <div key={message.id} className="message-container" data-message-id={message.id}>
+            <PreviewMessage
+              chatId={chatId}
+              message={message}
+              isLoading={isLoading && messages.length - 1 === index}
+              citations={(() => {
+                // Get citations for this message using the same logic as before
+                const directCitations = messageCitations[message.id];
+                const contentHash = message.content?.substring(0, 50).replace(/[^a-zA-Z0-9]/g, '');
+                const contentCitations = messageCitations[`content_${contentHash}`];
+                
+                // Also try content matching for robustness
+                let matchedCitations = null;
+                if (!directCitations && !contentCitations && message.content) {
+                  for (const [key, citations] of Object.entries(messageCitations)) {
+                    if (citations.length > 0 && citations[0].aiResponse) {
+                      const storedResponseStart = citations[0].aiResponse.substring(0, 200);
+                      const currentMessageStart = message.content.substring(0, 200);
+                      
+                      if (storedResponseStart && currentMessageStart && 
+                          storedResponseStart === currentMessageStart) {
+                        matchedCitations = citations;
+                        break;
+                      }
+                    }
+                  }
+                }
+                
+                return directCitations || contentCitations || matchedCitations;
+              })()}
+              onCitationClick={(citationNumber) => {
+                // Handle citation clicks - find which consolidated citation contains this original citation number
+                const citations = (() => {
+                  const directCitations = messageCitations[message.id];
+                  const contentHash = message.content?.substring(0, 50).replace(/[^a-zA-Z0-9]/g, '');
+                  const contentCitations = messageCitations[`content_${contentHash}`];
+                  
+                  let matchedCitations = null;
+                  if (!directCitations && !contentCitations && message.content) {
+                    for (const [key, citationList] of Object.entries(messageCitations)) {
+                      if (citationList.length > 0 && citationList[0].aiResponse) {
+                        const storedResponseStart = citationList[0].aiResponse.substring(0, 200);
+                        const currentMessageStart = message.content.substring(0, 200);
+                        
+                        if (storedResponseStart && currentMessageStart && 
+                            storedResponseStart === currentMessageStart) {
+                          matchedCitations = citationList;
+                          break;
+                        }
+                      }
+                    }
+                  }
+                  
+                  return directCitations || contentCitations || matchedCitations || [];
+                })();
+
+                // Find which consolidated citation contains the clicked original citation number
+                let targetConsolidatedIndex = -1;
+                const originalCitation = citations.find(c => c.rank === citationNumber);
+                if (originalCitation) {
+                  // Group citations by document (same logic as ArtifactWidget)
+                  const documentGroups: { [key: string]: any[] } = {};
+                  citations.forEach(citation => {
+                    const docKey = citation.document || 'Unknown Document';
+                    if (!documentGroups[docKey]) {
+                      documentGroups[docKey] = [];
+                    }
+                    documentGroups[docKey].push(citation);
+                  });
+
+                  // Find which group contains our target citation
+                  const sortedGroups = Object.entries(documentGroups)
+                    .map(([document, citationGroup]) => ({
+                      document,
+                      citationGroup: citationGroup.sort((a, b) => a.rank - b.rank),
+                      avgRelevance: citationGroup.reduce((sum, c) => sum + (c.relevance_score || 0), 0) / citationGroup.length
+                    }))
+                    .sort((a, b) => b.avgRelevance - a.avgRelevance);
+
+                  targetConsolidatedIndex = sortedGroups.findIndex(group => 
+                    group.citationGroup.some(c => c.rank === citationNumber)
+                  );
+                }
+
+                // Scroll to and highlight the consolidated citation
+                const citationWidgets = document.querySelectorAll('.artifact-widget');
+                const targetWidget = Array.from(citationWidgets).find(widget => {
+                  const messageElement = widget.closest('.message-container') || widget.parentElement?.parentElement;
+                  return messageElement?.querySelector(`[data-message-id="${message.id}"]`);
+                });
+                
+                if (targetWidget && targetConsolidatedIndex >= 0) {
+                  targetWidget.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  // Highlight the specific consolidated citation
+                  const citationCards = targetWidget.querySelectorAll('.citation-card');
+                  const targetCard = citationCards[targetConsolidatedIndex];
+                  if (targetCard) {
+                    targetCard.classList.add('highlighted');
+                    setTimeout(() => targetCard.classList.remove('highlighted'), 2000);
+                    // Auto-expand the citation to show content
+                    (targetCard as HTMLElement).click();
+                  }
+                }
+              }}
+            />
+            
+            {/* Show citations for AI responses */}
+            {message.role === 'assistant' && (() => {
+              // Try multiple ways to find citations for this message
+              const directCitations = messageCitations[message.id];
+              const contentHash = message.content.substring(0, 50).replace(/[^a-zA-Z0-9]/g, '');
+              const contentCitations = messageCitations[`content_${contentHash}`];
+              
+              // Also try to find citations by matching content from any stored citation
+              let matchedCitations = null;
+              if (!directCitations && !contentCitations && message.content) {
+                for (const [key, citations] of Object.entries(messageCitations)) {
+                  if (citations.length > 0 && citations[0].aiResponse) {
+                    // Check if the AI response content matches (first 200 chars)
+                    const storedResponseStart = citations[0].aiResponse.substring(0, 200);
+                    const currentMessageStart = message.content.substring(0, 200);
+                    
+                    if (storedResponseStart && currentMessageStart && 
+                        storedResponseStart === currentMessageStart) {
+                      console.log(`Found matching citations by content for message ${message.id} using key ${key}`);
+                      matchedCitations = citations;
+                      break;
+                    }
+                  }
+                }
+              }
+              
+              const citations = directCitations || contentCitations || matchedCitations;
+              
+              
+              return citations && citations.length > 0 ? (
+                <div className="w-full mx-auto max-w-3xl px-4 mb-4">
+                  <ArtifactWidget 
+                    citations={citations}
+                    title={`Sources for this response (${citations.length})`}
+                    className="max-w-full"
+                  />
+                </div>
+              ) : null;
+            })()}
+            
+          </div>
         ))}
+
+        {/* Show pending citations immediately after messages */}
+        {pendingCitations.length > 0 && (
+          <div className="w-full mx-auto max-w-3xl px-4 mb-4">
+            <ArtifactWidget 
+              citations={pendingCitations}
+              title={`Sources for this response (${pendingCitations.length})`}
+              className="max-w-full"
+            />
+          </div>
+        )}
+        
 
         {isLoading &&
           messages.length > 0 &&
@@ -449,12 +948,19 @@ export function Chat() {
         />
       </form>
       
-      {/* AI Disclaimer */}
+      {/* Beta Notice */}
       <div className="text-center px-4 pb-4 text-xs text-muted-foreground max-w-3xl mx-auto">
         <p>
-          AI can make mistakes. Please verify important information and consult with Yale Ventures directly for official guidance. 
-          Information provided is for reference only and may not reflect current programs or requirements.
+          <span className="font-semibold">⚠️ Beta Notice</span>
         </p>
+        <p className="mt-1">
+          This AI assistant is currently in beta. While it&apos;s designed to be helpful and informed by Yale Ventures resources, it may occasionally provide incomplete or outdated responses. Always double-check critical information, and don&apos;t hesitate to contact the Yale Ventures team directly if you need more support.
+        </p>
+      </div>
+      
+      {/* Footer Banner */}
+      <div className="bg-gray-100 border-t text-center py-2 text-xs text-gray-600">
+        Built by Aura AI
       </div>
       
       {/* Feedback Button - Fixed positioning in lower right corner */}

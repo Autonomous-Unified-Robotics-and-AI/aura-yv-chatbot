@@ -2,6 +2,7 @@
 
 import type { Message } from "ai";
 import { motion } from "framer-motion";
+import React from "react";
 
 import { SparklesIcon } from "./icons";
 import { Markdown } from "./markdown";
@@ -9,12 +10,99 @@ import { PreviewAttachment } from "./preview-attachment";
 import { cn } from "@/lib/utils";
 import { Weather } from "./weather";
 
+// Component to render markdown with clickable citation markers
+const MarkdownWithCitations = ({ 
+  content, 
+  onCitationClick, 
+  citations 
+}: { 
+  content: string; 
+  onCitationClick?: (citationNumber: number) => void;
+  citations?: any[];
+}) => {
+  const containerRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!containerRef.current) return;
+
+    // Find and style citation markers after markdown is rendered
+    const container = containerRef.current;
+    const walker = document.createTreeWalker(
+      container,
+      NodeFilter.SHOW_TEXT,
+      null
+    );
+
+    const textNodes = [];
+    let node;
+    while (node = walker.nextNode()) {
+      if (node.textContent?.includes('[') && node.textContent.includes(']')) {
+        textNodes.push(node);
+      }
+    }
+
+    // Process each text node to wrap citation markers
+    textNodes.forEach(textNode => {
+      const parent = textNode.parentNode as HTMLElement;
+      if (!parent) return;
+
+      const text = textNode.textContent || '';
+      if (text.match(/\[\d+\]/)) {
+        // Replace text with HTML that includes styled citation markers
+        const html = text.replace(
+          /\[(\d+)\]/g,
+          '<span class="citation-marker" data-citation="$1" style="color: #2563eb; cursor: pointer; font-weight: 600; text-decoration: underline; font-size: 0.875em; padding: 0 2px; border-radius: 2px; transition: all 0.2s;">[$1]</span>'
+        );
+        
+        if (html !== text) {
+          const wrapper = document.createElement('span');
+          wrapper.innerHTML = html;
+          parent.replaceChild(wrapper, textNode);
+        }
+      }
+    });
+  }, [content]);
+
+  return (
+    <div 
+      ref={containerRef}
+      className="markdown-with-citations"
+      onClick={(e) => {
+        const target = e.target as HTMLElement;
+        if (target.classList.contains('citation-marker')) {
+          const citationNumber = parseInt(target.getAttribute('data-citation') || '0');
+          if (onCitationClick && citationNumber > 0 && citationNumber <= (citations?.length || 0)) {
+            onCitationClick(citationNumber);
+            // Visual feedback
+            target.style.backgroundColor = '#dbeafe';
+            setTimeout(() => {
+              target.style.backgroundColor = '';
+            }, 200);
+          }
+        }
+      }}
+    >
+      <style jsx>{`
+        .markdown-with-citations :global(.citation-marker:hover) {
+          color: #1d4ed8 !important;
+          background-color: #eff6ff;
+        }
+      `}</style>
+      <Markdown>{content}</Markdown>
+    </div>
+  );
+};
+
 export const PreviewMessage = ({
   message,
+  citations,
+  onCitationClick,
 }: {
   chatId: string;
   message: Message;
   isLoading: boolean;
+  citations?: any[];
+  onCitationClick?: (citationNumber: number) => void;
 }) => {
   return (
     <motion.div
@@ -37,7 +125,11 @@ export const PreviewMessage = ({
         <div className="flex flex-col gap-2 w-full">
           {message.content && (
             <div className="flex flex-col gap-4">
-              <Markdown>{message.content as string}</Markdown>
+              <MarkdownWithCitations 
+                content={message.content as string}
+                citations={citations}
+                onCitationClick={onCitationClick}
+              />
             </div>
           )}
 
@@ -113,10 +205,167 @@ export const ThinkingMessage = () => {
 
         <div className="flex flex-col gap-2 w-full">
           <div className="flex flex-col gap-4 text-muted-foreground">
-            Thinking...
+            <AnimatedThinkingEllipses />
           </div>
         </div>
       </div>
     </motion.div>
+  );
+};
+
+// Animated thinking component with multiple animation options
+const AnimatedThinking = () => {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="font-medium">Thinking</span>
+      <div className="flex gap-1">
+        {[0, 1, 2].map((i) => (
+          <motion.div
+            key={i}
+            className="w-2 h-2 bg-muted-foreground rounded-full"
+            animate={{
+              y: [0, -8, 0],
+              opacity: [0.5, 1, 0.5],
+            }}
+            transition={{
+              duration: 1.2,
+              repeat: Infinity,
+              delay: i * 0.2,
+              ease: "easeInOut",
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// Alternative animation options (uncomment to use different styles)
+
+// Option 1: Pulsing dots
+const AnimatedThinkingPulse = () => (
+  <div className="flex items-center gap-2">
+    <span className="font-medium">Thinking</span>
+    <div className="flex gap-1">
+      {[0, 1, 2].map((i) => (
+        <motion.div
+          key={i}
+          className="w-2 h-2 bg-muted-foreground rounded-full"
+          animate={{
+            scale: [1, 1.5, 1],
+            opacity: [0.3, 1, 0.3],
+          }}
+          transition={{
+            duration: 1.5,
+            repeat: Infinity,
+            delay: i * 0.3,
+            ease: "easeInOut",
+          }}
+        />
+      ))}
+    </div>
+  </div>
+);
+
+// Option 2: Typing effect
+const AnimatedThinkingTyping = () => (
+  <div className="flex items-center gap-2">
+    <span className="flex items-center gap-2">
+      <span className="font-medium">Thinking</span>
+      <motion.div
+        className="w-2 h-2 bg-muted-foreground rounded-full"
+        animate={{
+          opacity: [1, 0],
+        }}
+        transition={{
+          duration: 0.8,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+      />
+    </span>
+  </div>
+);
+
+// Option 3: Wave effect
+const AnimatedThinkingWave = () => {
+  console.log("AnimatedThinkingWave component rendering");
+  
+  return (
+    <div className="flex items-center gap-2">
+      <span className="font-medium">Thinking</span>
+      <div className="flex gap-1">
+        {[0, 1, 2].map((i) => {
+          console.log(`Rendering wave bar ${i}`);
+          return (
+            <motion.div
+              key={i}
+              style={{
+                width: '4px',
+                height: '24px',
+                backgroundColor: 'hsl(var(--muted-foreground))',
+                borderRadius: '50%',
+                border: '1px solid red', // Debug border
+              }}
+              initial={{ height: 24, opacity: 0.3 }}
+              animate={{
+                height: [24, 32, 24],
+                opacity: [0.3, 1, 0.3],
+              }}
+              transition={{
+                duration: 1.2,
+                repeat: Infinity,
+                delay: i * 0.15,
+                ease: "easeInOut",
+              }}
+              onAnimationStart={() => console.log(`Animation started for bar ${i}`)}
+              onAnimationComplete={() => console.log(`Animation completed for bar ${i}`)}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// Fallback CSS-only wave animation (in case framer-motion has issues)
+const AnimatedThinkingWaveCSS = () => {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="font-medium">Thinking</span>
+      <div className="flex gap-1">
+        {[0, 1, 2].map((i) => (
+          <div
+            key={i}
+            className="w-0.5 h-2 bg-muted-foreground rounded-full"
+            style={{
+              animation: `wave 1.2s ease-in-out infinite`,
+              animationDelay: `${i * 0.2}s`,
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// Alternative: Animated ellipses with wave motion
+const AnimatedThinkingEllipses = () => {
+  return (
+    <div className="flex items-baseline gap-1">
+      <span className="font-medium">Thinking</span>
+      <div className="flex gap-0.5">
+        {[0, 1, 2].map((i) => (
+          <div
+            key={i}
+            className="w-1 h-1 bg-muted-foreground rounded-full"
+            style={{
+              animation: `ellipseWave 1.2s ease-in-out infinite`,
+              animationDelay: `${i * 0.2}s`,
+            }}
+          />
+        ))}
+      </div>
+    </div>
   );
 };
