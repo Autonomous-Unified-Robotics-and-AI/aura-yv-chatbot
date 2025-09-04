@@ -10,6 +10,38 @@
     {
       "source": "/api/data-extraction",
       "destination": "https://aurarag-production.up.railway.app/api/data-extraction"
+    },
+    {
+      "source": "/api/admin/user-data",
+      "destination": "https://aurarag-production.up.railway.app/api/admin/user-data"
+    },
+    {
+      "source": "/api/admin/stats",
+      "destination": "https://aurarag-production.up.railway.app/api/admin/stats"
+    },
+    {
+      "source": "/api/admin/feedback",
+      "destination": "https://aurarag-production.up.railway.app/api/admin/feedback"
+    },
+    {
+      "source": "/api/admin/sessions",
+      "destination": "https://aurarag-production.up.railway.app/api/admin/sessions"
+    },
+    {
+      "source": "/api/sessions/:path*",
+      "destination": "https://aurarag-production.up.railway.app/api/sessions/:path*"
+    },
+    {
+      "source": "/api/feedback",
+      "destination": "https://aurarag-production.up.railway.app/api/feedback"
+    },
+    {
+      "source": "/api/messages/:path*",
+      "destination": "https://aurarag-production.up.railway.app/api/messages/:path*"
+    },
+    {
+      "source": "/api/health",
+      "destination": "https://aurarag-production.up.railway.app/api/health"
     }
   ],
   "headers": [
