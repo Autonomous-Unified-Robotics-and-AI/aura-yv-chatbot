@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { useAdminApi } from '@/hooks/use-admin-api';
 import { 
   FileText, 
   Database,
@@ -45,6 +46,7 @@ export default function AdminPage() {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { authenticatedFetch } = useAdminApi();
 
   const fetchStats = async () => {
     setLoading(true);
@@ -53,8 +55,8 @@ export default function AdminPage() {
     try {
       // Fetch both stats and feedback data in parallel
       const [statsResponse, feedbackResponse] = await Promise.all([
-        fetch('/api/admin/stats'),
-        fetch('/api/admin/feedback')
+        authenticatedFetch('/api/admin/stats'),
+        authenticatedFetch('/api/admin/feedback')
       ]);
       
       if (!statsResponse.ok) {

@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { useAdminApi } from '@/hooks/use-admin-api';
 import { 
   Star,
   Search,
@@ -80,6 +81,7 @@ export default function AdminFeedbackPage() {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [period, setPeriod] = useState('30');
+  const { authenticatedFetch } = useAdminApi();
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedFeedback, setSelectedFeedback] = useState<FeedbackEntry | null>(null);
   const pageSize = 20;
@@ -96,7 +98,7 @@ export default function AdminFeedbackPage() {
     });
     
     try {
-      const response = await fetch(`/api/admin/feedback?${params}`);
+      const response = await authenticatedFetch(`/api/admin/feedback?${params}`);
       const result = await response.json();
       
       if (result.success) {

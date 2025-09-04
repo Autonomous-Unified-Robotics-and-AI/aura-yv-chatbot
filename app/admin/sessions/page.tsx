@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { useAdminApi } from '@/hooks/use-admin-api';
 import { 
   Users,
   Search,
@@ -78,6 +79,7 @@ export default function AdminSessionsPage() {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const { authenticatedFetch } = useAdminApi();
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const pageSize = 20;
@@ -97,7 +99,7 @@ export default function AdminSessionsPage() {
     }
     
     try {
-      const response = await fetch(`/api/admin/sessions?${params}`);
+      const response = await authenticatedFetch(`/api/admin/sessions?${params}`);
       const result = await response.json();
       
       if (result.success) {
