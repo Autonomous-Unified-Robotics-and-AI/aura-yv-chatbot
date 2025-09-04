@@ -1,0 +1,105 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("PRISMA_DATABASE_URL") // uses Prisma Accelerate (the accelerate.prisma-data.net URL)
+  directUrl = env("POSTGRES_URL") // direct database connection
+}
+
+model UserSession {
+  id              String    @id @default(cuid())
+  sessionId       String    @unique
+  createdAt       DateTime  @default(now())
+  lastActivity    DateTime  @updatedAt
+  phase           String    @default("welcome_data_collection")
+  completionRate  Float     @default(0.0)
+  
+  // User data fields
+  userName        String?
+  userEmail       String?
+  userRole        String?
+  schoolAffiliation String?
+  ventureStage    String?
+  primaryNeed     String?
+  urgencyLevel    String?
+  department      String?
+  startupStage    String?
+  
+  // Extracted data from messages
+  extractedName   String?
+  extractedEmail  String?
+  extractedRole   String?
+  extractedDept   String?
+  
+  // Relationships
+  messages        ChatMessage[]
+  feedback        UserFeedback[]
+  
+  @@map("user_sessions")
+}
+
+model ChatMessage {
+  id            String      @id @default(cuid())
+  sessionId     String
+  userMessage   String?
+  aiResponse    String?
+  timestamp     DateTime    @default(now())
+  phase         String?
+  ragTriggered  Boolean     @default(false)
+  citations     Json?
+  
+  // Relationship
+  session       UserSession @relation(fields: [sessionId], references: [sessionId], onDelete: Cascade)
+  
+  @@map("chat_messages")
+}
+
+model UserFeedback {
+  id                    String      @id @default(cuid())
+  sessionId             String?
+  overallRating         Int
+  helpfulnessRating     Int
+  accuracyRating        Int
+  easeOfUseRating       Int
+  specificFeedback      String?
+  improvementSuggestions String?
+  wouldRecommend        Boolean
+  userEmail             String?
+  timestamp             DateTime    @default(now())
+  
+  // Relationship (nullable since feedback might exist without session)
+  session               UserSession? @relation(fields: [sessionId], references: [sessionId], onDelete: SetNull)
+  
+  @@map("user_feedback")
+}
+
+model ExtractedData {
+  id          String    @id @default(cuid())
+  sessionId   String?
+  dataType    String    // 'document_extraction', 'web_crawl', etc.
+  source      String?   // URL or database source
+  content     Json      // Extracted content
+  metadata    Json?     // Additional metadata
+  extractedAt DateTime  @default(now())
+  
+  @@map("extracted_data")
+}
+
+model DataExtractionJob {
+  id          String    @id @default(cuid())
+  jobType     String    // 'notion_db', 'web_crawl', etc.
+  source      String    // Source URL or identifier
+  status      String    @default("pending") // pending, running, completed, failed
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  error       String?
+  resultCount Int       @default(0)
+  metadata    Json?
+  
+  @@map("data_extraction_jobs")
+}

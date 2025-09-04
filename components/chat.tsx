@@ -902,7 +902,7 @@ export function Chat() {
                 <div className="w-full mx-auto max-w-3xl px-4 mb-4">
                   <ArtifactWidget 
                     citations={citations}
-                    title={`Sources for this response (${citations.length})`}
+                    title="Sources for this response"
                     className="max-w-full"
                   />
                 </div>
@@ -917,7 +917,7 @@ export function Chat() {
           <div className="w-full mx-auto max-w-3xl px-4 mb-4">
             <ArtifactWidget 
               citations={pendingCitations}
-              title={`Sources for this response (${pendingCitations.length})`}
+              title="Sources for this response"
               className="max-w-full"
             />
           </div>

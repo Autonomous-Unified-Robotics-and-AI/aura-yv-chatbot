@@ -78,8 +78,6 @@ export function AdminDashboard({ token, onSignOut }: AdminDashboardProps) {
   const [error, setError] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
 
-  const backendUrl = process.env.NODE_ENV === 'development' ? 'http://localhost:8000' : '';
-
   const fetchData = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -129,17 +127,16 @@ export function AdminDashboard({ token, onSignOut }: AdminDashboardProps) {
 
   const exportData = async (format: 'json' | 'csv') => {
     try {
-      const response = await fetch(`${backendUrl}/api/admin/export?format=${format}`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (!response.ok) throw new Error('Export failed');
-
-      const data = await response.json();
+      // Use local data for export instead of calling backend
+      const exportData = {
+        stats: stats,
+        userData: userData,
+        feedbackData: feedbackData,
+        timestamp: new Date().toISOString()
+      };
       
       if (format === 'json') {
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -147,7 +144,24 @@ export function AdminDashboard({ token, onSignOut }: AdminDashboardProps) {
         a.click();
         URL.revokeObjectURL(url);
       } else {
-        const blob = new Blob([data.csv_data], { type: 'text/csv' });
+        // Convert to CSV format
+        let csvContent = 'session_id,created_at,name,email,role,department,startup_stage,total_messages,last_activity\n';
+        
+        userData.forEach(user => {
+          csvContent += [
+            user.session_id,
+            user.created_at,
+            user.collected_data.name || '',
+            user.collected_data.email || '',
+            user.collected_data.role || '',
+            user.collected_data.department || '',
+            user.collected_data.startup_stage || '',
+            user.messages.length,
+            user.last_activity
+          ].map(field => `"${field}"`).join(',') + '\n';
+        });
+        
+        const blob = new Blob([csvContent], { type: 'text/csv' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;

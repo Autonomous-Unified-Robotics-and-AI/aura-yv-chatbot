@@ -85,7 +85,11 @@ export const YaleVenturesIcon = ({ size = 24 }: { size?: number }) => {
       width={size}
       height={Math.round(size * 0.4)} // Maintain aspect ratio based on the stacked logo
       className="object-contain"
-      style={{ filter: 'none' }}
+      style={{ 
+        filter: 'none',
+        width: `${size}px`,
+        height: 'auto'
+      }}
     />
   );
 };

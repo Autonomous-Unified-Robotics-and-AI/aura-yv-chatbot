@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
-import { X, Send, Star } from 'lucide-react';
+import { X, Send, Star, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface FeedbackPopupProps {
@@ -188,8 +188,8 @@ export function FeedbackPopup({ isOpen, onClose, sessionId }: FeedbackPopupProps
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <div>
             <CardTitle className="flex items-center gap-2">
-              <Star className="h-5 w-5" />
-              Share Your Feedback
+              <MessageSquare className="h-5 w-5" />
+              Provide Feedback
             </CardTitle>
             <CardDescription>
               Help us improve the Yale Ventures AI Assistant

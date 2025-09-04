@@ -9,16 +9,16 @@ import { Settings } from "lucide-react";
 export const Navbar = () => {
   const pathname = usePathname();
   const router = useRouter();
-  const isAdminPage = pathname === "/admin";
+  const isAdminPage = pathname.startsWith("/admin");
 
   const handleChatLogoClick = () => {
-    // Always go to the chatbot page and clear chat
+    // Always go to the main chat page and clear chat
     if (isAdminPage) {
-      // Navigate from admin page to main chat page and clear
+      // Navigate from admin page to main chat page with clear parameter
       router.push("/?clear=true");
     } else {
-      // Already on main page, just clear chat by reloading
-      window.location.reload();
+      // Already on main page, navigate to home with clear parameter to trigger chat clearing
+      router.push("/?clear=true");
     }
   };
 
@@ -53,11 +53,27 @@ export const Navbar = () => {
           </Link>
         )}
         {isAdminPage && (
-          <Link href="/">
-            <Button variant="ghost" size="sm" className="text-gray-500 hover:text-gray-700">
-              ← Back to Chat
-            </Button>
-          </Link>
+          <>
+            <nav className="flex items-center space-x-4 mr-4">
+              <Link 
+                href="/admin" 
+                className="text-sm text-gray-600 hover:text-gray-900 px-2 py-1 rounded transition-colors"
+              >
+                Dashboard
+              </Link>
+              <Link 
+                href="/admin/documents" 
+                className="text-sm text-gray-600 hover:text-gray-900 px-2 py-1 rounded transition-colors"
+              >
+                Documents
+              </Link>
+            </nav>
+            <Link href="/">
+              <Button variant="ghost" size="sm" className="text-gray-500 hover:text-gray-700">
+                ← Back to Chat
+              </Button>
+            </Link>
+          </>
         )}
       </div>
     </div>

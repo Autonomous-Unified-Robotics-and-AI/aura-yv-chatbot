@@ -1,0 +1,2 @@
+# This directory stores original documents for serving
+# Files in this directory are served via /files/ API endpoint
