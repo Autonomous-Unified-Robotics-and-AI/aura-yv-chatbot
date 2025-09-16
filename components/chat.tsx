@@ -62,9 +62,10 @@ export function Chat() {
       console.log("Creating new session...");
       
       // Determine which API to use based on environment
-      const backendUrl = process.env.NODE_ENV === 'development' 
-        ? 'http://localhost:8000' 
-        : 'https://aurarag-production.up.railway.app';
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 
+        (process.env.NODE_ENV === 'development' 
+          ? 'http://localhost:8000' 
+          : 'https://aurarag-production.up.railway.app');
       
       const response = await fetch(`${backendUrl}/api/sessions`, {
         method: "POST",
@@ -228,9 +229,10 @@ export function Chat() {
   const loadCitationHistory = async (sessionId: string) => {
     console.log("🔄 loadCitationHistory called for session:", sessionId);
     try {
-      const backendUrl = process.env.NODE_ENV === 'development' 
-        ? 'http://localhost:8000' 
-        : 'https://aurarag-production.up.railway.app';
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 
+        (process.env.NODE_ENV === 'development' 
+          ? 'http://localhost:8000' 
+          : 'https://aurarag-production.up.railway.app');
       
       const response = await fetch(`${backendUrl}/api/sessions/${sessionId}/messages`);
       if (response.ok) {

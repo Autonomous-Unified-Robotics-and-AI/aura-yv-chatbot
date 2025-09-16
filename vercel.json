@@ -23,7 +23,6 @@
     }
   },
   "env": {
-    "BACKEND_URL": "https://aurarag-production.up.railway.app",
     "NODE_ENV": "production"
   }
 }
