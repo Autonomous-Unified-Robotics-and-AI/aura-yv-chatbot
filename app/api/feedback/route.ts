@@ -55,10 +55,7 @@ export async function POST(request: NextRequest) {
           
           // Try to validate session with backend and sync if needed
           try {
-            const backendUrl = process.env.BACKEND_URL || 
-              (process.env.NODE_ENV === 'development' 
-                ? 'http://localhost:8000' 
-                : 'https://aurarag-production.up.railway.app');
+            const backendUrl = process.env.BACKEND_URL || 'http://localhost:8000';
             
             const backendResponse = await fetch(`${backendUrl}/api/sessions/${session_id}`, {
               timeout: 5000 // 5 second timeout

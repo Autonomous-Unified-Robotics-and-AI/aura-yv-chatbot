@@ -623,9 +623,9 @@ export function Chat() {
           if (existingSessionId) {
             // Validate session is still active - try backend first
             try {
-              const apiUrl = process.env.NODE_ENV === 'development' 
-                ? 'http://localhost:8000' 
-                : 'https://aurarag-production.up.railway.app';
+              // Always use relative URLs to go through Next.js rewrites
+              // This avoids CORS issues and uses the BACKEND_URL from next.config.js
+              const apiUrl = '';
               
               let response = await fetch(`${apiUrl}/api/sessions/${existingSessionId}`);
               
