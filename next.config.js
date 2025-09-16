@@ -2,6 +2,8 @@
 const nextConfig = {
   rewrites: async () => {
     const backendUrl = process.env.BACKEND_URL || "http://localhost:8000";
+    console.log('BACKEND_URL from environment:', process.env.BACKEND_URL);
+    console.log('Using backend URL:', backendUrl);
     
     return [
       {

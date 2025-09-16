@@ -62,12 +62,11 @@ export function Chat() {
       console.log("Creating new session...");
       
       // Determine which API to use based on environment
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 
-        (process.env.NODE_ENV === 'development' 
-          ? 'http://localhost:8000' 
-          : 'https://aurarag-production.up.railway.app');
+      // Always use relative URLs to go through Next.js rewrites
+      // This avoids CORS issues and uses the BACKEND_URL from next.config.js
+      const apiUrl = '';
       
-      const response = await fetch(`${backendUrl}/api/sessions`, {
+      const response = await fetch(`${apiUrl}/api/sessions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -168,11 +167,12 @@ export function Chat() {
   const resetConversation = async () => {
     if (sessionId) {
       try {
-        const backendUrl = process.env.NODE_ENV === 'development' 
+        // Use relative URLs in production to go through Next.js rewrites
+        const apiUrl = process.env.NODE_ENV === 'development' 
           ? 'http://localhost:8000' 
-          : 'https://aurarag-production.up.railway.app';
+          : '';
         
-        const response = await fetch(`${backendUrl}/api/sessions/${sessionId}/reset`, {
+        const response = await fetch(`${apiUrl}/api/sessions/${sessionId}/reset`, {
           method: 'POST'
         });
         
@@ -229,12 +229,11 @@ export function Chat() {
   const loadCitationHistory = async (sessionId: string) => {
     console.log("🔄 loadCitationHistory called for session:", sessionId);
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 
-        (process.env.NODE_ENV === 'development' 
-          ? 'http://localhost:8000' 
-          : 'https://aurarag-production.up.railway.app');
+      // Always use relative URLs to go through Next.js rewrites
+      // This avoids CORS issues and uses the BACKEND_URL from next.config.js
+      const apiUrl = '';
       
-      const response = await fetch(`${backendUrl}/api/sessions/${sessionId}/messages`);
+      const response = await fetch(`${apiUrl}/api/sessions/${sessionId}/messages`);
       if (response.ok) {
         const data = await response.json();
         console.log("Loaded session messages:", data);
@@ -259,7 +258,7 @@ export function Chat() {
           // Load citations for assistant messages
           if (message.role === 'assistant' && message.citations_count > 0) {
             try {
-              const citationResponse = await fetch(`${backendUrl}/api/messages/${message.id}/citations`);
+              const citationResponse = await fetch(`${apiUrl}/api/messages/${message.id}/citations`);
               if (citationResponse.ok) {
                 const citationData = await citationResponse.json();
                 console.log(`Citations for message ${message.id}:`, citationData);
@@ -367,11 +366,11 @@ export function Chat() {
         
         console.log("Sending request:", backendBody);
         
-        const backendUrl = process.env.NODE_ENV === 'development' 
+        const apiUrl = process.env.NODE_ENV === 'development' 
           ? 'http://localhost:8000' 
           : '';
         
-        const response = await fetch(`${backendUrl}/api/chat`, {
+        const response = await fetch(`${apiUrl}/api/chat`, {
           ...init,
           body: JSON.stringify(backendBody)
         });
@@ -476,7 +475,7 @@ export function Chat() {
               console.log("Syncing user data from backend response...");
               
               // First, get the current backend session data to extract user info
-              const backendSessionResponse = await fetch(`${backendUrl}/api/sessions/${sessionId}`);
+              const backendSessionResponse = await fetch(`${apiUrl}/api/sessions/${sessionId}`);
               if (backendSessionResponse.ok) {
                 const backendSessionData = await backendSessionResponse.json();
                 console.log("Backend session data:", backendSessionData);
@@ -624,11 +623,11 @@ export function Chat() {
           if (existingSessionId) {
             // Validate session is still active - try backend first
             try {
-              const backendUrl = process.env.NODE_ENV === 'development' 
+              const apiUrl = process.env.NODE_ENV === 'development' 
                 ? 'http://localhost:8000' 
                 : 'https://aurarag-production.up.railway.app';
               
-              let response = await fetch(`${backendUrl}/api/sessions/${existingSessionId}`);
+              let response = await fetch(`${apiUrl}/api/sessions/${existingSessionId}`);
               
               // If backend fails, try local Next.js API as fallback
               if (!response.ok && response.status >= 500) {
