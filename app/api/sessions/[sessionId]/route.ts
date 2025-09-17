@@ -4,10 +4,10 @@ import { prisma } from '@/lib/prisma';
 // GET - Get session status
 export async function GET(
   request: NextRequest,
-  { params }: { params: { sessionId: string } }
+  { params }: { params: Promise<{ sessionId: string }> }
 ) {
   try {
-    const { sessionId } = params;
+    const { sessionId } = await params;
 
     // Find session in database
     const session = await prisma.userSession.findUnique({

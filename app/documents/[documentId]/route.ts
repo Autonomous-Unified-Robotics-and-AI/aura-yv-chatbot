@@ -24,10 +24,10 @@ interface ExtractedDocument {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { documentId: string } }
+  { params }: { params: Promise<{ documentId: string }> }
 ) {
   try {
-    const { documentId } = params;
+    const { documentId } = await params;
     
     // Debug logging
     console.log(`🔍 Document API request for ID: "${documentId}"`);
