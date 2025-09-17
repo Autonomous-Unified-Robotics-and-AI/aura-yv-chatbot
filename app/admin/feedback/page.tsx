@@ -101,10 +101,64 @@ export default function AdminFeedbackPage() {
       const response = await authenticatedFetch(`/api/admin/feedback?${params}`);
       const result = await response.json();
       
-      if (result.success) {
+      console.log('🔍 Feedback API response:', result);
+      
+      // Handle direct API response format (from Railway backend)
+      if (result.feedback && Array.isArray(result.feedback)) {
+        // Convert Railway API format to expected format
+        const convertedData = {
+          feedback: result.feedback.map((item: any) => ({
+            id: item.id,
+            timestamp: item.timestamp,
+            ratings: {
+              overall: item.overall_rating,
+              helpfulness: item.helpfulness_rating,
+              accuracy: item.accuracy_rating,
+              easeOfUse: item.ease_of_use_rating,
+            },
+            feedback: {
+              specific: item.specific_feedback || '',
+              improvements: item.improvement_suggestions || '',
+              wouldRecommend: item.would_recommend || false,
+            },
+            userInfo: {
+              email: item.email || '',
+              role: '',
+              name: '',
+              sessionPhase: '',
+            },
+            sessionId: item.session_id || '',
+            sessionCreated: item.timestamp,
+          })),
+          analytics: {
+            averageRatings: {
+              overall: result.average_rating,
+              helpfulness: result.average_rating,
+              accuracy: result.average_rating,
+              easeOfUse: result.average_rating,
+            },
+            recommendations: {
+              yes: Math.round(result.total_feedback * result.recommendation_rate),
+              no: Math.round(result.total_feedback * (1 - result.recommendation_rate)),
+            },
+            ratingDistribution: [],
+            totalResponses: result.total_feedback,
+          },
+          pagination: {
+            total: result.total_feedback,
+            limit: parseInt(params.get('limit') || '20'),
+            offset: parseInt(params.get('offset') || '0'),
+            hasMore: false,
+            period: parseInt(params.get('period') || '30'),
+          },
+        };
+        setData(convertedData);
+      } else if (result.success && result.data) {
+        // Handle wrapped response format (if using Next.js API routes)
         setData(result.data);
       } else {
-        throw new Error(result.error || 'Failed to fetch feedback');
+        console.error('❌ Unexpected API response format:', result);
+        throw new Error(result.error || 'Invalid response format from feedback API');
       }
     } catch (err) {
       console.error('Error fetching feedback:', err);

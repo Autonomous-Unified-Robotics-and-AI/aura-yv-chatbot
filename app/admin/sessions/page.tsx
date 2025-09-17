@@ -100,12 +100,35 @@ export default function AdminSessionsPage() {
     
     try {
       const response = await authenticatedFetch(`/api/admin/sessions?${params}`);
-      const result = await response.json();
       
-      if (result.success) {
+      console.log('📦 Raw response received:', {
+        status: response.status,
+        headers: Object.fromEntries(response.headers.entries()),
+        url: response.url
+      });
+      
+      const responseText = await response.text();
+      console.log('📄 Raw response text:', responseText);
+      
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('💥 JSON parse error:', parseError);
+        throw new Error(`Failed to parse JSON response: ${responseText.substring(0, 200)}...`);
+      }
+      
+      console.log('🔍 Sessions API response:', result);
+      
+      // Handle direct API response format (from Railway backend)
+      if (result.sessions && result.pagination) {
+        setData(result);
+      } else if (result.success && result.data) {
+        // Handle wrapped response format (if using Next.js API routes)
         setData(result.data);
       } else {
-        throw new Error(result.error || 'Failed to fetch sessions');
+        console.error('❌ Unexpected API response format:', result);
+        throw new Error(result.error || 'Invalid response format from sessions API');
       }
     } catch (err) {
       console.error('Error fetching sessions:', err);
